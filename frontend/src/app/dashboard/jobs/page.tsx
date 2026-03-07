@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { Briefcase, Building2, Link as LinkIcon, Plus, Loader2 } from 'lucide-react';
+import { Briefcase, Building2, Link as LinkIcon, Plus, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -20,6 +20,7 @@ export default function JobsPage() {
     const [isAdding, setIsAdding] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({ title: '', company: '', url: '', description: '' });
+    const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
     useEffect(() => {
         fetchJobs();
@@ -38,7 +39,13 @@ export default function JobsPage() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            await api.post('/api/jobs', formData);
+            const { data } = await api.post('/api/jobs', formData);
+
+            // Generate embeddings
+            if (data?.id) {
+                await api.post(`/api/embeddings/jobs/${data.id}`);
+            }
+
             setIsAdding(false);
             setFormData({ title: '', company: '', url: '', description: '' });
             await fetchJobs();
@@ -129,11 +136,43 @@ export default function JobsPage() {
                                 </p>
                                 <div className="flex justify-between items-center text-xs text-gray-500">
                                     <span>Added {new Date(job.created_at).toLocaleDateString()}</span>
-                                    <Button variant="outline" size="sm" className="h-8">Details</Button>
+                                    <Button onClick={() => setSelectedJob(job)} variant="outline" size="sm" className="h-8">Details</Button>
                                 </div>
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {selectedJob && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                        <div className="flex justify-between items-center p-5 border-b border-gray-100">
+                            <h3 className="font-semibold text-xl text-gray-900 pr-8">
+                                {selectedJob.title}
+                            </h3>
+                            <button onClick={() => setSelectedJob(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-5 border-b border-gray-100 bg-gray-50 flex items-center gap-4 text-sm text-gray-600">
+                            <div className="flex items-center">
+                                <Building2 className="w-4 h-4 mr-1.5 text-gray-400" />
+                                {selectedJob.company}
+                            </div>
+                            {selectedJob.url && (
+                                <div className="flex items-center">
+                                    <LinkIcon className="w-4 h-4 mr-1.5 text-gray-400" />
+                                    <a href={selectedJob.url} target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                        View Posting
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-5 overflow-y-auto whitespace-pre-wrap text-sm text-gray-700 leading-relaxed flex-1">
+                            {selectedJob.description}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { UploadCloud, FileText, Trash2, Loader2, Eye } from 'lucide-react';
+import { UploadCloud, FileText, Trash2, Loader2, Eye, X } from 'lucide-react';
 
 interface Resume {
     id: number;
@@ -15,6 +15,7 @@ export default function ResumesPage() {
     const [resumes, setResumes] = useState<Resume[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [file, setFile] = useState<File | null>(null);
+    const [previewResume, setPreviewResume] = useState<Resume | null>(null);
 
     useEffect(() => {
         fetchResumes();
@@ -42,9 +43,15 @@ export default function ResumesPage() {
         formData.append('file', file);
 
         try {
-            await api.post('/api/resumes/upload', formData, {
+            const uploadRes = await api.post('/api/resumes/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
+
+            // Generate embeddings in the background
+            if (uploadRes.data?.id) {
+                await api.post(`/api/embeddings/resumes/${uploadRes.data.id}`);
+            }
+
             setFile(null);
             await fetchResumes();
         } catch (error) {
@@ -52,6 +59,16 @@ export default function ResumesPage() {
             alert('Failed to upload resume. Make sure it is a valid PDF.');
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this resume?')) return;
+        try {
+            await api.delete(`/api/resumes/${id}`);
+            await fetchResumes();
+        } catch (error) {
+            console.error('Failed to delete resume', error);
         }
     };
 
@@ -113,15 +130,33 @@ export default function ResumesPage() {
                             </div>
 
                             <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                                <button className="flex-1 flex justify-center items-center py-1.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors">
+                                <button onClick={() => setPreviewResume(resume)} className="flex-1 flex justify-center items-center py-1.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors">
                                     <Eye className="w-4 h-4 mr-1.5" /> Preview
                                 </button>
-                                <button className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                                <button onClick={() => handleDelete(resume.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {previewResume && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                        <div className="flex justify-between items-center p-5 border-b border-gray-100">
+                            <h3 className="font-semibold text-lg text-gray-900 truncate">
+                                Preview: {previewResume.filename}
+                            </h3>
+                            <button onClick={() => setPreviewResume(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-5 overflow-y-auto whitespace-pre-wrap text-sm text-gray-700 font-mono bg-gray-50 leading-relaxed rounded-b-xl flex-1">
+                            {previewResume.parsed_text || "No text extracted."}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
