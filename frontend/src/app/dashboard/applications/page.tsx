@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Plus, Briefcase, Loader2, Calendar, X, Sparkles } from 'lucide-react';
+import { Plus, Briefcase, Loader2, Calendar, X, Sparkles, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export enum ApplicationStatus {
@@ -47,6 +47,9 @@ export default function ApplicationsPage() {
     const [matchScore, setMatchScore] = useState<number | null>(null);
     const [coverLetter, setCoverLetter] = useState<string | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    const [interviewQuestions, setInterviewQuestions] = useState<any[]>([]);
+    const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
     useEffect(() => {
         fetchApplications();
@@ -115,10 +118,29 @@ export default function ApplicationsPage() {
         }
     };
 
+    const handleGenerateQuestions = async () => {
+        if (!selectedApp) return;
+        setIsGeneratingQuestions(true);
+        setInterviewQuestions([]);
+        try {
+            const res = await api.post('/api/generation/interview-prep', {
+                job_id: selectedApp.job_id,
+                resume_id: selectedApp.resume_id
+            });
+            setInterviewQuestions(res.data.questions);
+        } catch (error: any) {
+            console.error('Failed to generate questions', error);
+            alert('Failed to generate interview questions.');
+        } finally {
+            setIsGeneratingQuestions(false);
+        }
+    };
+
     const openDetails = (app: Application) => {
         setSelectedApp(app);
         setMatchScore(null);
         setCoverLetter(null);
+        setInterviewQuestions([]);
     };
 
     const onDragEnd = async (result: DropResult) => {
@@ -297,14 +319,25 @@ export default function ApplicationsPage() {
                                         <p className="text-sm text-gray-500 mb-5">
                                             Generate a tailored cover letter and calculate your resume's match compatibility against this job description.
                                         </p>
-                                        <Button
-                                            onClick={handleAnalyze}
-                                            disabled={isAnalyzing}
-                                            className="w-full max-w-xs mx-auto bg-indigo-600 hover:bg-indigo-700"
-                                        >
-                                            {isAnalyzing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                                            {isAnalyzing ? 'Analyzing...' : 'Run Analysis'}
-                                        </Button>
+                                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                            <Button
+                                                onClick={handleAnalyze}
+                                                disabled={isAnalyzing}
+                                                className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700"
+                                            >
+                                                {isAnalyzing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                                                {isAnalyzing ? 'Analyzing...' : 'Run Analysis'}
+                                            </Button>
+                                            <Button
+                                                onClick={handleGenerateQuestions}
+                                                disabled={isGeneratingQuestions}
+                                                variant="outline"
+                                                className="w-full sm:w-auto border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                            >
+                                                {isGeneratingQuestions ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserCheck className="w-4 h-4 mr-2" />}
+                                                {isGeneratingQuestions ? 'Generating...' : 'Interview Prep'}
+                                            </Button>
+                                        </div>
                                     </div>
 
                                     {matchScore !== null && (
@@ -320,12 +353,37 @@ export default function ApplicationsPage() {
                                     )}
 
                                     {coverLetter && (
-                                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-6">
                                             <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 font-medium text-sm text-gray-700">
                                                 Generated Cover Letter
                                             </div>
                                             <div className="p-5 whitespace-pre-wrap text-sm text-gray-700 leading-relaxed font-serif">
                                                 {coverLetter}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {interviewQuestions.length > 0 && (
+                                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-6">
+                                            <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 font-medium text-sm text-gray-700 flex items-center">
+                                                <UserCheck className="w-4 h-4 mr-2 text-indigo-500" />
+                                                Interview Preparation
+                                            </div>
+                                            <div className="divide-y divide-gray-100">
+                                                {interviewQuestions.map((iq, idx) => (
+                                                    <div key={idx} className="p-5">
+                                                        <div className="flex items-start mb-2">
+                                                            <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-semibold mr-3 mt-0.5 shrink-0">
+                                                                {iq.category}
+                                                            </span>
+                                                            <h5 className="font-medium text-gray-900 leading-snug">{iq.question}</h5>
+                                                        </div>
+                                                        <div className="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-100 text-sm text-gray-600">
+                                                            <span className="font-semibold text-gray-700 block mb-1">How to answer:</span>
+                                                            {iq.advice}
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     )}
