@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Plus, Briefcase, Loader2, Calendar, X, Sparkles, UserCheck } from 'lucide-react';
+import { Plus, Briefcase, Loader2, Calendar, X, Sparkles, UserCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export enum ApplicationStatus {
@@ -133,6 +133,18 @@ export default function ApplicationsPage() {
             alert('Failed to generate interview questions.');
         } finally {
             setIsGeneratingQuestions(false);
+        }
+    };
+
+    const handleDeleteApp = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this application?')) return;
+        try {
+            await api.delete(`/api/applications/${id}`);
+            setApplications(applications.filter(a => a.id !== id));
+            setSelectedApp(null);
+        } catch (error) {
+            console.error('Failed to delete application', error);
+            alert('Failed to delete application.');
         }
     };
 
@@ -302,9 +314,14 @@ export default function ApplicationsPage() {
                                 <h3 className="font-semibold text-xl text-gray-900">{selectedApp.job.title}</h3>
                                 <p className="text-sm text-gray-500">{selectedApp.job.company}</p>
                             </div>
-                            <button onClick={() => setSelectedApp(null)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center space-x-2">
+                                <button onClick={() => handleDeleteApp(selectedApp.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors" title="Delete Application">
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                                <button onClick={() => setSelectedApp(null)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
                         <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
                             {!selectedApp.resume_id ? (

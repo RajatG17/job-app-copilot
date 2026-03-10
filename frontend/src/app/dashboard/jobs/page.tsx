@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { Briefcase, Building2, Link as LinkIcon, Plus, Loader2, X } from 'lucide-react';
+import { Briefcase, Building2, Link as LinkIcon, Plus, Loader2, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -54,6 +54,17 @@ export default function JobsPage() {
             alert('Failed to add job.');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteJob = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this job?\n\nWarning: Any tracked applications for this job will also be permanently deleted.')) return;
+        try {
+            await api.delete(`/api/jobs/${id}`);
+            setJobs(jobs.filter(j => j.id !== id));
+        } catch (error) {
+            console.error('Failed to delete job', error);
+            alert('Failed to delete job.');
         }
     };
 
@@ -136,7 +147,12 @@ export default function JobsPage() {
                                 </p>
                                 <div className="flex justify-between items-center text-xs text-gray-500">
                                     <span>Added {new Date(job.created_at).toLocaleDateString()}</span>
-                                    <Button onClick={() => setSelectedJob(job)} variant="outline" size="sm" className="h-8">Details</Button>
+                                    <div className="flex space-x-2">
+                                        <Button onClick={() => handleDeleteJob(job.id)} variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50">
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                        <Button onClick={() => setSelectedJob(job)} variant="outline" size="sm" className="h-8">Details</Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

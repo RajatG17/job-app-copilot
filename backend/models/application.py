@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 import enum
 from db.database import Base
@@ -24,5 +24,5 @@ class Application(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     user = relationship("User", back_populates="applications")
-    job = relationship("Job", backref="applications")
-    resume = relationship("Resume", backref="applications")
+    job = relationship("Job", backref=backref("applications", cascade="all, delete-orphan", passive_deletes=True))
+    resume = relationship("Resume", backref=backref("applications", passive_deletes=True))

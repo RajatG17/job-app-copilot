@@ -51,3 +51,17 @@ async def list_jobs(
     result = await db.execute(select(Job).where(Job.user_id == current_user.id))
     jobs = result.scalars().all()
     return jobs
+
+@router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_job(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(select(Job).where(Job.id == job_id, Job.user_id == current_user.id))
+    job = result.scalars().first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    await db.delete(job)
+    await db.commit()

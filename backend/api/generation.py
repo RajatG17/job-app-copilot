@@ -69,7 +69,7 @@ async def generate_interview_prep(
 
     try:
         response = await gemini_client.aio.models.generate_content(
-            model="gemini-3.1-flash-preview",
+            model="gemini-2.5-flash",
             contents=prompt,
         )
         # Strip markdown json block if it exists
@@ -84,6 +84,10 @@ async def generate_interview_prep(
         parsed = json.loads(response_text.strip())
         return InterviewPrepResponse(**parsed)
     except json.JSONDecodeError as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to parse AI response as JSON")
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")

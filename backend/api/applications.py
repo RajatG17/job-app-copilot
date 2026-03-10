@@ -114,3 +114,17 @@ async def update_application(
         .options(selectinload(Application.job), selectinload(Application.resume))
     )
     return result.scalars().first()
+
+@router.delete("/{app_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_application(
+    app_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(select(Application).where(Application.id == app_id, Application.user_id == current_user.id))
+    app = result.scalars().first()
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+        
+    await db.delete(app)
+    await db.commit()
