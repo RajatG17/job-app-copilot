@@ -10,6 +10,18 @@ from db.database import get_db
 from models.user import User
 from models.resume import Resume
 from api.auth import get_current_user
+from datetime import datetime
+
+from pydantic import BaseModel
+
+class ResumeResponse(BaseModel):
+    id: int
+    filename: str
+    parsed_text: str | None = None
+    created_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
 
 router = APIRouter()
 
@@ -55,7 +67,7 @@ async def upload_resume(
 
     return {"message": "Resume uploaded successfully", "id": new_resume.id}
 
-@router.get("/")
+@router.get("", response_model=list[ResumeResponse])
 async def list_resumes(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -63,3 +75,25 @@ async def list_resumes(
     result = await db.execute(select(Resume).where(Resume.user_id == current_user.id))
     resumes = result.scalars().all()
     return resumes
+
+@router.delete("/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_resume(
+    resume_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id))
+    resume = result.scalars().first()
+    
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+        
+    # Attempt to remove file
+    if os.path.exists(resume.file_path):
+        try:
+            os.remove(resume.file_path)
+        except Exception:
+            pass # Ignore if file missing or locked
+            
+    await db.delete(resume)
+    await db.commit()

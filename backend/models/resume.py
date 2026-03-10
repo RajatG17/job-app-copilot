@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from pgvector.sqlalchemy import Vector
 from db.database import Base
 
 class Resume(Base):
@@ -11,6 +12,7 @@ class Resume(Base):
     filename = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
     parsed_text = Column(Text, nullable=True)
+    embedding = Column(Vector(768), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="resumes")

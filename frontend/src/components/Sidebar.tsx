@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, FileText, Briefcase, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Briefcase, Settings, LogOut, Trello } from 'lucide-react';
 import Cookies from 'js-cookie';
 
 export default function Sidebar() {
@@ -11,6 +11,7 @@ export default function Sidebar() {
 
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Applications', href: '/dashboard/applications', icon: Trello },
         { name: 'Resumes', href: '/dashboard/resumes', icon: FileText },
         { name: 'Jobs', href: '/dashboard/jobs', icon: Briefcase },
         { name: 'Settings', href: '/dashboard/settings', icon: Settings },

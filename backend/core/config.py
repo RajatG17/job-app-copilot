@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
     # AI Config
-    OPENAI_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
 
     @property
     def DATABASE_URL(self) -> str:
