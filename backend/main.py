@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
-from api import auth, resumes, jobs, applications, embeddings, matching, generation
+from api import auth, resumes, jobs, applications, embeddings, matching, generation, tasks
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -23,6 +23,7 @@ app.include_router(applications.router, prefix="/api/applications", tags=["appli
 app.include_router(embeddings.router, prefix="/api/embeddings", tags=["embeddings"])
 app.include_router(matching.router, prefix="/api/matching", tags=["matching"])
 app.include_router(generation.router, prefix="/api/generation", tags=["generation"])
+app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 
 @app.get("/health")
 def health_check():
