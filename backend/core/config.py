@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "super_secret_key_change_in_production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ALLOWED_ORIGINS: str = "http://localhost:3000"
     
     # AI Config
     GEMINI_API_KEY: Optional[str] = None
