@@ -5,6 +5,8 @@ import api from '@/lib/api';
 import { Briefcase, Building2, Link as LinkIcon, Plus, Loader2, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Job {
     id: number;
@@ -17,10 +19,12 @@ interface Job {
 
 export default function JobsPage() {
     const [jobs, setJobs] = useState<Job[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({ title: '', company: '', url: '', description: '' });
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
         fetchJobs();
@@ -28,10 +32,13 @@ export default function JobsPage() {
 
     const fetchJobs = async () => {
         try {
+            setIsLoading(true);
             const { data } = await api.get('/api/jobs');
             setJobs(data);
         } catch (error) {
             console.error('Failed to fetch jobs:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -49,9 +56,18 @@ export default function JobsPage() {
             setIsAdding(false);
             setFormData({ title: '', company: '', url: '', description: '' });
             await fetchJobs();
+            toast({
+                title: 'Job Added',
+                description: 'Successfully added the job to your tracker.',
+                variant: 'success',
+            });
         } catch (error) {
             console.error('Failed to create job:', error);
-            alert('Failed to add job.');
+            toast({
+                title: 'Error',
+                description: 'Failed to add job.',
+                variant: 'destructive',
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -62,11 +78,59 @@ export default function JobsPage() {
         try {
             await api.delete(`/api/jobs/${id}`);
             setJobs(jobs.filter(j => j.id !== id));
+            toast({
+                title: 'Job Deleted',
+                description: 'Successfully deleted the job.',
+            });
         } catch (error) {
             console.error('Failed to delete job', error);
-            alert('Failed to delete job.');
+            toast({
+                title: 'Error',
+                description: 'Failed to delete job.',
+                variant: 'destructive',
+            });
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="max-w-6xl mx-auto flex flex-col h-full mt-8">
+                <div className="flex justify-between items-center mb-8 shrink-0">
+                    <div>
+                        <Skeleton className="h-9 w-48 mb-2" />
+                        <Skeleton className="h-5 w-64" />
+                    </div>
+                    <Skeleton className="h-10 w-32" />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden h-64 flex flex-col">
+                            <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+                                <Skeleton className="h-6 w-3/4 mb-3" />
+                                <Skeleton className="h-4 w-1/2 mb-2" />
+                                <Skeleton className="h-4 w-1/3" />
+                            </div>
+                            <div className="p-5 flex-1 flex flex-col justify-between">
+                                <div>
+                                    <Skeleton className="h-3 w-full mb-2" />
+                                    <Skeleton className="h-3 w-full mb-2" />
+                                    <Skeleton className="h-3 w-4/5" />
+                                </div>
+                                <div className="flex justify-between items-center mt-4">
+                                    <Skeleton className="h-3 w-24" />
+                                    <div className="flex space-x-2">
+                                        <Skeleton className="h-8 w-8 rounded-md" />
+                                        <Skeleton className="h-8 w-16 rounded-md" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-6xl mx-auto">

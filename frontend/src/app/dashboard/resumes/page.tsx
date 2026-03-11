@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { UploadCloud, FileText, Trash2, Loader2, Eye, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Resume {
     id: number;
@@ -13,9 +15,11 @@ interface Resume {
 
 export default function ResumesPage() {
     const [resumes, setResumes] = useState<Resume[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [previewResume, setPreviewResume] = useState<Resume | null>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
         fetchResumes();
@@ -23,10 +27,13 @@ export default function ResumesPage() {
 
     const fetchResumes = async () => {
         try {
+            setIsLoading(true);
             const { data } = await api.get('/api/resumes');
             setResumes(data);
         } catch (error) {
             console.error('Failed to fetch resumes:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -54,9 +61,18 @@ export default function ResumesPage() {
 
             setFile(null);
             await fetchResumes();
+            toast({
+                title: 'Resume Uploaded',
+                description: 'Successfully uploaded your resume.',
+                variant: 'success',
+            });
         } catch (error) {
             console.error('Upload failed:', error);
-            alert('Failed to upload resume. Make sure it is a valid PDF.');
+            toast({
+                title: 'Upload Failed',
+                description: 'Failed to upload resume. Make sure it is a valid PDF.',
+                variant: 'destructive',
+            });
         } finally {
             setIsUploading(false);
         }
@@ -67,8 +83,17 @@ export default function ResumesPage() {
         try {
             await api.delete(`/api/resumes/${id}`);
             await fetchResumes();
+            toast({
+                title: 'Resume Deleted',
+                description: 'Successfully deleted your resume.',
+            });
         } catch (error) {
             console.error('Failed to delete resume', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to delete resume.',
+                variant: 'destructive',
+            });
         }
     };
 
@@ -107,7 +132,25 @@ export default function ResumesPage() {
 
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Saved Resumes</h2>
 
-            {resumes.length === 0 ? (
+            {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[1, 2].map((i) => (
+                        <div key={i} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between h-32">
+                            <div className="flex items-start mb-4">
+                                <Skeleton className="w-10 h-10 rounded-lg mr-3" />
+                                <div className="space-y-2">
+                                    <Skeleton className="h-5 w-48" />
+                                    <Skeleton className="h-3 w-32" />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                                <Skeleton className="h-8 flex-1" />
+                                <Skeleton className="h-8 w-8" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : resumes.length === 0 ? (
                 <div className="text-center py-10 bg-white rounded-xl border border-gray-100 text-gray-500">
                     No resumes found. Upload one above to get started.
                 </div>

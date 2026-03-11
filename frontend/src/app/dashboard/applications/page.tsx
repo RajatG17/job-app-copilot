@@ -5,6 +5,8 @@ import api from '@/lib/api';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Plus, Briefcase, Loader2, Calendar, X, Sparkles, UserCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/use-toast';
 
 export enum ApplicationStatus {
     APPLIED = 'Applied',
@@ -49,6 +51,7 @@ export default function ApplicationsPage() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     const [interviewQuestions, setInterviewQuestions] = useState<any[]>([]);
+    const { toast } = useToast();
     const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
     useEffect(() => {
@@ -125,7 +128,11 @@ export default function ApplicationsPage() {
                     } else if (taskRes.data.status === 'FAILURE' || taskRes.data.status === 'REVOKED') {
                         clearInterval(pollInterval);
                         console.error('Task failed', taskRes.data);
-                        alert(taskRes.data.error || 'Failed to generate cover letter.');
+                        toast({
+                            title: 'Analysis Failed',
+                            description: taskRes.data.error || 'Failed to generate cover letter.',
+                            variant: 'destructive',
+                        });
                         setIsAnalyzing(false);
                     }
                     // If PENDING or STARTED, do nothing, just wait for next poll
@@ -166,7 +173,11 @@ export default function ApplicationsPage() {
                     } else if (taskRes.data.status === 'FAILURE' || taskRes.data.status === 'REVOKED') {
                         clearInterval(pollInterval);
                         console.error('Task failed', taskRes.data);
-                        alert(taskRes.data.error || 'Failed to generate interview questions.');
+                        toast({
+                            title: 'Generation Failed',
+                            description: taskRes.data.error || 'Failed to generate interview questions.',
+                            variant: 'destructive',
+                        });
                         setIsGeneratingQuestions(false);
                     }
                     // If PENDING or STARTED, do nothing, just wait for next poll
@@ -179,7 +190,11 @@ export default function ApplicationsPage() {
 
         } catch (error: any) {
             console.error('Failed to generate questions', error);
-            alert('Failed to generate interview questions.');
+            toast({
+                title: 'Error',
+                description: 'Failed to start interview question generation task.',
+                variant: 'destructive',
+            });
             setIsGeneratingQuestions(false);
         }
     };
@@ -190,9 +205,17 @@ export default function ApplicationsPage() {
             await api.delete(`/api/applications/${id}`);
             setApplications(applications.filter(a => a.id !== id));
             setSelectedApp(null);
+            toast({
+                title: 'Deleted',
+                description: 'Application tracker deleted successfully.',
+            });
         } catch (error) {
             console.error('Failed to delete application', error);
-            alert('Failed to delete application.');
+            toast({
+                title: 'Error',
+                description: 'Failed to delete application tracker.',
+                variant: 'destructive',
+            });
         }
     };
 
@@ -226,8 +249,18 @@ export default function ApplicationsPage() {
 
         try {
             await api.patch(`/api/applications/${appId}`, { status: newStatus });
+            toast({
+                title: 'Status Updated',
+                description: `Application moved to ${newStatus}`,
+                variant: 'success',
+            });
         } catch (error) {
             console.error('Failed to update application status:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to update application status. Reverting change.',
+                variant: 'destructive',
+            });
             // Revert on failure
             fetchApplications();
         }
@@ -235,8 +268,27 @@ export default function ApplicationsPage() {
 
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center h-full">
-                <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <div className="max-w-7xl mx-auto flex flex-col h-full">
+                <div className="flex justify-between items-center mb-6 shrink-0">
+                    <div>
+                        <Skeleton className="h-9 w-64 mb-2" />
+                        <Skeleton className="h-5 w-80" />
+                    </div>
+                    <Skeleton className="h-10 w-32" />
+                </div>
+                
+                <div className="flex gap-6 flex-1 min-h-0 overflow-x-auto pb-4">
+                    {[1, 2, 3, 4].map(col => (
+                        <div key={col} className="bg-gray-50/80 p-4 rounded-xl flex-shrink-0 w-80 flex flex-col h-full border border-gray-100">
+                            <Skeleton className="h-6 w-24 mb-4" />
+                            <div className="flex-1 overflow-y-auto space-y-3">
+                                {[1, 2].map(card => (
+                                    <Skeleton key={card} className="h-32 w-full rounded-lg" />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
