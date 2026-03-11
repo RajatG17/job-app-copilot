@@ -102,18 +102,43 @@ export default function ApplicationsPage() {
         setMatchScore(null);
         setCoverLetter(null);
         try {
+            // Score fetches directly (now cached via Redis)
             const scoreRes = await api.get(`/api/matching/score/${selectedApp.job_id}/${selectedApp.resume_id}`);
             setMatchScore(scoreRes.data.similarity_score);
 
+            // Tailor cover letter is a background task
             const tailorRes = await api.post(`/api/matching/tailor`, {
                 job_id: selectedApp.job_id,
                 resume_id: selectedApp.resume_id
             });
-            setCoverLetter(tailorRes.data.cover_letter);
+
+            const taskId = tailorRes.data.task_id;
+
+            // Poll for task completion
+            const pollInterval = setInterval(async () => {
+                try {
+                    const taskRes = await api.get(`/api/tasks/${taskId}`);
+                    if (taskRes.data.status === 'SUCCESS') {
+                        clearInterval(pollInterval);
+                        setCoverLetter(taskRes.data.result.data.cover_letter);
+                        setIsAnalyzing(false);
+                    } else if (taskRes.data.status === 'FAILURE' || taskRes.data.status === 'REVOKED') {
+                        clearInterval(pollInterval);
+                        console.error('Task failed', taskRes.data);
+                        alert(taskRes.data.error || 'Failed to generate cover letter.');
+                        setIsAnalyzing(false);
+                    }
+                    // If PENDING or STARTED, do nothing, just wait for next poll
+                } catch (err) {
+                    console.error('Polling error', err);
+                    clearInterval(pollInterval);
+                    setIsAnalyzing(false);
+                }
+            }, 2000); // Poll every 2 seconds
+
         } catch (error: any) {
             console.error('Analysis failed', error);
             alert(error.response?.data?.detail || 'Failed to analyze. Ensure embeddings exist.');
-        } finally {
             setIsAnalyzing(false);
         }
     };
@@ -127,11 +152,34 @@ export default function ApplicationsPage() {
                 job_id: selectedApp.job_id,
                 resume_id: selectedApp.resume_id
             });
-            setInterviewQuestions(res.data.questions);
+
+            const taskId = res.data.task_id;
+
+            // Poll for task completion
+            const pollInterval = setInterval(async () => {
+                try {
+                    const taskRes = await api.get(`/api/tasks/${taskId}`);
+                    if (taskRes.data.status === 'SUCCESS') {
+                        clearInterval(pollInterval);
+                        setInterviewQuestions(taskRes.data.result.data.questions);
+                        setIsGeneratingQuestions(false);
+                    } else if (taskRes.data.status === 'FAILURE' || taskRes.data.status === 'REVOKED') {
+                        clearInterval(pollInterval);
+                        console.error('Task failed', taskRes.data);
+                        alert(taskRes.data.error || 'Failed to generate interview questions.');
+                        setIsGeneratingQuestions(false);
+                    }
+                    // If PENDING or STARTED, do nothing, just wait for next poll
+                } catch (err) {
+                    console.error('Polling error', err);
+                    clearInterval(pollInterval);
+                    setIsGeneratingQuestions(false);
+                }
+            }, 2000); // Poll every 2 seconds
+
         } catch (error: any) {
             console.error('Failed to generate questions', error);
             alert('Failed to generate interview questions.');
-        } finally {
             setIsGeneratingQuestions(false);
         }
     };
@@ -355,55 +403,55 @@ export default function ApplicationsPage() {
                                                 {isGeneratingQuestions ? 'Generating...' : 'Interview Prep'}
                                             </Button>
                                         </div>
+
+                                        {matchScore !== null && (
+                                            <div className="bg-white border border-green-100 rounded-xl p-5 flex items-center shadow-sm">
+                                                <div className="h-16 w-16 rounded-full bg-green-50 flex items-center justify-center border-4 border-green-100 shrink-0">
+                                                    <span className="text-xl font-bold text-green-600">{matchScore}%</span>
+                                                </div>
+                                                <div className="ml-4">
+                                                    <h5 className="font-semibold text-gray-900">Match Score</h5>
+                                                    <p className="text-sm text-gray-500">Based on semantic similarity between your resume keywords and the job description.</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {coverLetter && (
+                                            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-6">
+                                                <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 font-medium text-sm text-gray-700">
+                                                    Generated Cover Letter
+                                                </div>
+                                                <div className="p-5 whitespace-pre-wrap text-sm text-gray-700 leading-relaxed font-serif">
+                                                    {coverLetter}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {interviewQuestions.length > 0 && (
+                                            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-6">
+                                                <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 font-medium text-sm text-gray-700 flex items-center">
+                                                    <UserCheck className="w-4 h-4 mr-2 text-indigo-500" />
+                                                    Interview Preparation
+                                                </div>
+                                                <div className="divide-y divide-gray-100">
+                                                    {interviewQuestions.map((iq, idx) => (
+                                                        <div key={idx} className="p-5">
+                                                            <div className="flex items-start mb-2">
+                                                                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-semibold mr-3 mt-0.5 shrink-0">
+                                                                    {iq.category}
+                                                                </span>
+                                                                <h5 className="font-medium text-gray-900 leading-snug">{iq.question}</h5>
+                                                            </div>
+                                                            <div className="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-100 text-sm text-gray-600">
+                                                                <span className="font-semibold text-gray-700 block mb-1">How to answer:</span>
+                                                                {iq.advice}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {matchScore !== null && (
-                                        <div className="bg-white border border-green-100 rounded-xl p-5 flex items-center shadow-sm">
-                                            <div className="h-16 w-16 rounded-full bg-green-50 flex items-center justify-center border-4 border-green-100 shrink-0">
-                                                <span className="text-xl font-bold text-green-600">{matchScore}%</span>
-                                            </div>
-                                            <div className="ml-4">
-                                                <h5 className="font-semibold text-gray-900">Match Score</h5>
-                                                <p className="text-sm text-gray-500">Based on semantic similarity between your resume keywords and the job description.</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {coverLetter && (
-                                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-6">
-                                            <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 font-medium text-sm text-gray-700">
-                                                Generated Cover Letter
-                                            </div>
-                                            <div className="p-5 whitespace-pre-wrap text-sm text-gray-700 leading-relaxed font-serif">
-                                                {coverLetter}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {interviewQuestions.length > 0 && (
-                                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-6">
-                                            <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 font-medium text-sm text-gray-700 flex items-center">
-                                                <UserCheck className="w-4 h-4 mr-2 text-indigo-500" />
-                                                Interview Preparation
-                                            </div>
-                                            <div className="divide-y divide-gray-100">
-                                                {interviewQuestions.map((iq, idx) => (
-                                                    <div key={idx} className="p-5">
-                                                        <div className="flex items-start mb-2">
-                                                            <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-semibold mr-3 mt-0.5 shrink-0">
-                                                                {iq.category}
-                                                            </span>
-                                                            <h5 className="font-medium text-gray-900 leading-snug">{iq.question}</h5>
-                                                        </div>
-                                                        <div className="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-100 text-sm text-gray-600">
-                                                            <span className="font-semibold text-gray-700 block mb-1">How to answer:</span>
-                                                            {iq.advice}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>

@@ -23,6 +23,22 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  celery_worker:
+    build: 
+      context: ./backend
+    container_name: job_copilot_celery
+    command: celery -A core.celery_app.celery_app worker --loglevel=info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-job_copilot}
+      - REDIS_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
