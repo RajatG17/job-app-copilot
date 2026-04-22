@@ -2,6 +2,8 @@ import os
 from celery import Celery
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6380/0")
+if REDIS_URL.startswith("rediss://") and "ssl_cert_reqs" not in REDIS_URL:
+    REDIS_URL += "?ssl_cert_reqs=CERT_NONE" if "?" not in REDIS_URL else "&ssl_cert_reqs=CERT_NONE"
 
 celery_app = Celery(
     "job_copilot_worker",

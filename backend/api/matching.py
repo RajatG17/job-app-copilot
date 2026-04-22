@@ -41,7 +41,10 @@ async def get_match_score(
     
     try:
         # Check cache first
-        redis_client = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6380/0"))
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6380/0")
+        if redis_url.startswith("rediss://") and "ssl_cert_reqs" not in redis_url:
+            redis_url += "?ssl_cert_reqs=CERT_NONE" if "?" not in redis_url else "&ssl_cert_reqs=CERT_NONE"
+        redis_client = redis.Redis.from_url(redis_url)
         cache_key = f"score:{job_id}:{resume_id}"
         cached_score = redis_client.get(cache_key)
         
