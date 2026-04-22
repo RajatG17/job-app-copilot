@@ -28,7 +28,7 @@ class Settings(BaseSettings):
             "DATABASE_URL",
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
-
+        
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 settings = Settings()
