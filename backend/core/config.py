@@ -24,10 +24,15 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL(self) -> str:
         import os
-        return os.environ.get(
+        url = os.environ.get(
             "DATABASE_URL",
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
         
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
