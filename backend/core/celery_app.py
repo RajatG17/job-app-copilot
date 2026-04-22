@@ -21,6 +21,8 @@ celery_app.conf.update(
     task_track_started=True,
     task_acks_late=True,
     worker_prefetch_multiplier=1,
+    worker_concurrency=1,
+    worker_max_tasks_per_child=10,
 )
 
 # Optional: To help debugging during local dev
