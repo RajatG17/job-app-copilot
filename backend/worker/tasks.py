@@ -67,7 +67,7 @@ async def _generate_interview_prep(job_id: int, resume_id: int | None):
         except Exception as e:
             return {"error": str(e)}
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=5)
+@shared_task(bind=True, max_retries=5, retry_backoff=True)
 def generate_interview_prep_task(self, job_id: int, resume_id: int | None = None):
     try:
         result = async_to_sync(_generate_interview_prep(job_id, resume_id))
@@ -118,7 +118,7 @@ async def _generate_cover_letter(job_id: int, resume_id: int):
         except Exception as e:
             return {"error": str(e)}
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=5)
+@shared_task(bind=True, max_retries=5, retry_backoff=True)
 def generate_cover_letter_task(self, job_id: int, resume_id: int):
     try:
         result = async_to_sync(_generate_cover_letter(job_id, resume_id))
